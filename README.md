@@ -1,6 +1,6 @@
 # AI-Powered Seizure Early-Warning from EEG
 
-**Team:** [Team Name]
+**Team:** [Team Atlas]
 **Event:** National Neuroscience Technology Hackathon 2026 (Theme C: AI & Brain Data)
 **Platform:** MATLAB (R2026b)
 
@@ -14,7 +14,7 @@ This is a decision-support tool for clinicians, not a replacement for them.
 
 | Role | Name | Owns |
 |---|---|---|
-| Project Lead | [Name] | Scope, timeline, integration, submission, README |
+| Project Lead | [Yusuf Zakariya] | Scope, timeline, integration, submission, README |
 | Data and Preprocessing | [Name] | Dataset download, annotation parsing, windowing, filtering, artifact removal |
 | Feature and Model | [Name] | Feature extraction, Random Forest and SVM training |
 | Robustness and Validation | [Name] | Patient-wise evaluation, noise and channel tests, explainability |
