@@ -121,7 +121,7 @@ One row per window. Columns: `patientID`, `fileName`, `windowStartSec`, `label`,
 | `extractFeatures` | `windows, fs` | feature table |
 | `trainModel` | training feature table | trained model |
 | `predictRisk` | model, feature table | risk score from 0 to 1 per window |
-| `evaluateEvents` | scores, labels, filename, opts, `windowStartSec` | sensitivity, false alarms per hour, latency |
+| `evaluateEvents` | `scores, labels, windowStartSec, fileName, opts` | a struct with sensitivity, false alarms per hour, median latency, and tables of each seizure and alert |
 
 ### 4.6 Alert and evaluation rules
 
