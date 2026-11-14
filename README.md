@@ -14,11 +14,11 @@ This is a decision-support tool for clinicians, not a replacement for them. We c
 
 | Role | Name | Owns |
 |---|---|---|
-| Project Lead | [Name] | Scope, timeline, integration, `config.m`, submission, README |
-| Data and Preprocessing | [Name] | Downloads, annotation parsing, windowing, filtering, artifact removal |
-| Feature and Model | [Name] | Feature extraction, Random Forest and SVM training |
-| Robustness and Validation | [Name] | Patient-wise evaluation, noise and channel tests, explainability |
-| Dashboard and Presentation | [Name] | App Designer dashboard, slides, demo |
+| Project Lead | Yusuf | Scope, timeline, integration, `config.m`, submission, README |
+| Data and Preprocessing | Yusuf | Downloads, annotation parsing, windowing, filtering, artifact removal |
+| Feature and Model | Amanda | Feature extraction, Random Forest and SVM training |
+| Robustness and Validation | Yusuf | Patient-wise evaluation, noise and channel tests, explainability |
+| Dashboard and Presentation | Abdulrahman | App Designer dashboard, slides, demo |
 
 ---
 
