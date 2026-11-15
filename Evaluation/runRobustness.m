@@ -9,8 +9,11 @@ function R = runRobustness(trainIDs, testID, final)
 % false alarms per hour and median latency. Test patients chb03 and chb18 are
 % blocked unless final is true, so nobody uses them by accident.
 %
-% On a development patient (subsampled windows) false alarms per hour is NOT
-% reliable, and evaluateEvents will warn. It is valid on the full test patients.
+% On a development patient (subsampled windows) only AUC is trustworthy: false
+% alarms per hour cannot be seen (isolated windows can never form an alert), so
+% read the event columns only on the full test patients.
+% Noise: band-limited (0.5-40 Hz) white noise at a fixed level relative to the
+% patient's typical signal power, like an electrode noise floor.
 
     cfg = config();
     rng(42);
@@ -42,9 +45,10 @@ function R = runRobustness(trainIDs, testID, final)
     end
 
     fprintf('Building noisy feature tables for %s...\n', testID);
+    ref = referencePower(testID);
     Ttest = cell(1, numel(snrLevels));
     for k = 1:numel(snrLevels)
-        Ttest{k} = buildNoisyFeatures(testID, snrLevels(k));
+        Ttest{k} = buildNoisyFeatures(testID, snrLevels(k), ref);
     end
 
     rows = struct('channelSet', {}, 'nChannels', {}, 'snrDb', {}, 'auc', {}, ...
@@ -57,7 +61,7 @@ function R = runRobustness(trainIDs, testID, final)
             risk = predictRisk(model, T);
             [~, ~, ~, auc] = perfcurve(T.label, risk, 1);
             ev = evaluateEvents(risk, T.label, T.windowStartSec, T.fileName, ...
-                                struct('threshold', thr));
+                                struct('threshold', thr, 'quiet', true));
             rows(end+1) = struct('channelSet', string(channelSets(c).name), ...
                 'nChannels', numel(keep), 'snrDb', snrLevels(k), 'auc', auc, ...
                 'sensitivity', ev.sensitivity, ...

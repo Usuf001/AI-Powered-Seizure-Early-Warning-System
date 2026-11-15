@@ -5,6 +5,7 @@ function results = evaluateEvents(scores, labels, windowStartSec, fileName, opts
 %       threshold    alert threshold                (default cfg.alertThreshold, or 0.5)
 %       consecutive  windows in a row needed        (default cfg.alertConsecutiveWindows)
 %       windowSec, stepSec                           (defaults from config)
+%       quiet        true hides the missing-windows warning
 %
 % scores          risk score per window (0 to 1)
 % labels          0/1 per window (1 = seizure window)
@@ -81,7 +82,8 @@ function results = evaluateEvents(scores, labels, windowStartSec, fileName, opts
         gapPairs = gapPairs + sum(diff(ts) > stepSec + 1e-6);
     end
 
-    if pairs > 0 && gapPairs / pairs > 0.01
+    quiet = getOpt(opts, 'quiet', false);
+    if ~quiet && pairs > 0 && gapPairs / pairs > 0.01
         warning(['Many windows are missing (subsampled data). Sensitivity and ' ...
                  'latency are fine, but false alarms per hour is NOT reliable.']);
     end

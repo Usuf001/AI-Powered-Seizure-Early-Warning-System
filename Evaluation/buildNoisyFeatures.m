@@ -1,20 +1,22 @@
-function T = buildNoisyFeatures(patientID, snrDb)
+function T = buildNoisyFeatures(patientID, snrDb, refPower)
 % BUILDNOISYFEATURES  Feature table for a patient after adding noise to the windows.
 %   T = buildNoisyFeatures('chb14', 10)
+%   T = buildNoisyFeatures('chb14', 10, refPower)   reuse refPower from referencePower
 % Reads Data/processed/<patientID>.mat in chunks (safe for big patients), adds
 % noise at snrDb with addNoise, then extracts features. Nothing is saved.
 
     cfg = config();
     rng(42);
     patientID = char(patientID);
+    if nargin < 3 || isempty(refPower), refPower = referencePower(patientID); end
     m = matfile(fullfile(cfg.processedDir, [patientID '.mat']));
     sz = size(m, 'windows');
 
-    chunk = 2000;
+    chunk = 500;
     parts = {};
     for i1 = 1:chunk:sz(1)
         i2 = min(i1 + chunk - 1, sz(1));
-        w = addNoise(m.windows(i1:i2, :, :), snrDb);
+        w = addNoise(m.windows(i1:i2, :, :), snrDb, refPower);
         parts{end+1} = extractFeatures(w, cfg.fs, cfg.channelNames); %#ok<AGROW>
     end
     F = vertcat(parts{:});
