@@ -1,6 +1,9 @@
-function buildPatientData(patientID, cfg)
+function buildPatientData(patientID, cfg, keepAll)
 % BUILDPATIENTDATA  Turn one patient's raw CHB-MIT files into a processed .mat file.
 %   buildPatientData('chb05')
+%   buildPatientData('chb05', config(), true)   keep EVERY window and save as
+%                                                chb05_full.mat (training patients only;
+%                                                used to measure false alarms per hour)
 %
 % Steps: read each downloaded EDF file, keep the agreed 18 channels, band-pass
 % filter, cut into windows, label each window from the summary file, and save
@@ -10,10 +13,13 @@ function buildPatientData(patientID, cfg)
 % windows (cfg.negativePerPositive per seizure window). Test patients keep
 % every window, so false alarms per hour is meaningful.
 
-    if nargin < 2, cfg = config(); end
+    if nargin < 2 || isempty(cfg), cfg = config(); end
+    if nargin < 3, keepAll = false; end
     rng(42);
     patientID = char(patientID);
-    isTest = ismember(patientID, cfg.testPatients);
+    isTest = ismember(patientID, cfg.testPatients) || keepAll;
+    outName = patientID;
+    if keepAll && ~ismember(patientID, cfg.testPatients), outName = [patientID '_full']; end
 
     rawPatientDir = fullfile(cfg.rawDir, patientID);
     summaryPath   = fullfile(rawPatientDir, [patientID '-summary.txt']);
@@ -114,7 +120,7 @@ function buildPatientData(patientID, cfg)
     fs = cfg.fs; %#ok<NASGU>
     channelNames = cfg.channelNames; %#ok<NASGU>
     skippedFiles = skipped; %#ok<NASGU>
-    outPath = fullfile(cfg.processedDir, [patientID '.mat']);
+    outPath = fullfile(cfg.processedDir, [outName '.mat']);
     save(outPath, 'windows', 'labels', 'windowStartSec', 'fileName', ...
          'patientID', 'fs', 'channelNames', 'skippedFiles', '-v7.3');
     fprintf('Saved %s\n', outPath);

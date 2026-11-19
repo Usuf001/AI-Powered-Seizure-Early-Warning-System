@@ -50,6 +50,9 @@ function cfg = config()
 
     % ---- Training ----
     cfg.negativePerPositive = 10; % seizure-free windows kept per seizure window
+    % true = rescale every feature within each patient (normalizeByPatient) inside
+    % trainModel and predictRisk. Decide once from testNormalization, then leave it.
+    cfg.normalizeFeatures = true;
 
     % ---- Download (CHB-MIT on PhysioNet) ----
     cfg.baseUrl = 'https://physionet.org/files/chbmit/1.0.0/';
