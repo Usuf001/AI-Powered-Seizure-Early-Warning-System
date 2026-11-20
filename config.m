@@ -46,7 +46,7 @@ function cfg = config()
 
     % ---- Alert rule ----
     cfg.alertConsecutiveWindows = 3;
-    cfg.alertThreshold = [];      % tuned on training patients only, locked on day 11
+    cfg.alertThreshold = 0.4;      % tuned on training patients only, locked on day 11
 
     % ---- Training ----
     cfg.negativePerPositive = 10; % seizure-free windows kept per seizure window
