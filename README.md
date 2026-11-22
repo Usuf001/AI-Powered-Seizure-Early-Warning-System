@@ -1,217 +1,164 @@
-# AI-Powered Seizure Early-Warning System
+# Team Atlas: Seizure Early-Warning System
 
-**Team:** Team Atlas
-**Event:** National Neuroscience Technology Hackathon 2026 (Theme C: AI & Brain Data)
-**Platform:** MATLAB (R2026b)
+A MATLAB pipeline that detects seizures in scalp EEG recordings of children and young adults, raises an alert when the risk stays high, and replays the result on a dashboard. It is built for low-cost, noisy recordings, such as those in clinics with few neurologists.
 
-A MATLAB pipeline that reads EEG recordings, cleans them, detects seizure activity, and shows a live risk score and alerts on an explainable dashboard. It is built to hold up on noisy, reduced-channel recordings, which is the situation in low-resource clinics. Our focus population is children and young adults.
+**What we claim:** seizure *detection* as an early-warning and screening aid for clinicians. We do not claim to predict seizures before they start, and every alert is meant to be checked by a clinician on the raw EEG.
 
-This is a decision-support tool for clinicians, not a replacement for them. We claim seizure **detection** as an early-warning and screening aid. We do not claim true seizure prediction.
+**Event:** National Neuroscience Technology Hackathon 2026, Theme C (AI & Brain Data) · **Platform:** MATLAB R2026b
 
 ---
 
-## 1. Team and roles
+## 1. Results
 
-| Role | Name | Owns |
-|---|---|---|
-| Project Lead | Yusuf | Scope, timeline, integration, `config.m`, submission, README |
-| Data and Preprocessing | Yusuf | Downloads, annotation parsing, windowing, filtering, artifact removal |
-| Feature and Model | Amanda | Feature extraction, Random Forest and SVM training |
-| Robustness and Validation | Yusuf | Patient-wise evaluation, noise and channel tests, explainability |
-| Dashboard and Presentation | Abdulrahman | App Designer dashboard, slides, demo |
+Final test on two patients the model never saw (chb03, chb18), run once with the model and the alert threshold (0.4) locked beforehand.
+
+| | chb03 | chb18 | Combined |
+|---|---|---|---|
+| Seizures detected | 7 of 7 | 5 of 6 | **12 of 13** |
+| False alarms per hour | 2.19 (37 in 16.9 h) | 4.95 (77 in 15.5 h) | 3.5 (114 in 32.4 h) |
+| Median alert delay after onset | 25 s | 15 s | 25 s (range 10 to 37.5 s) |
+| AUC | 0.984 | 0.926 | |
+
+- The model ranks windows well on unseen patients (AUC 0.93 to 0.98). The one missed seizure (chb18, file 30) is the shortest in the set, at about 32 s.
+- False alarms are above the roughly one per hour we aimed for. The threshold was chosen on two other patients, and false alarm rates differ a lot between patients. We did not change it after seeing these results.
+- **Robustness:** sensitivity stayed at 100% (chb03) and about 83% (chb18) with as few as 4 of 18 channels and with added noise down to 0 dB. The cost shows up as more false alarms (chb03: 2.1 per hour clean, 14.0 at 0 dB).
+
+**How the model was chosen** (leave-one-patient-out AUC on the four training patients):
+
+| Random Forest | chb05 | chb14 | chb01 | chb15 | Mean |
+|---|---|---|---|---|---|
+| Raw features | 0.828 | 0.784 | 0.274 | 0.603 | 0.622 |
+| **Features rescaled within each patient** | **0.992** | **0.757** | **0.938** | **0.872** | **0.890** |
+
+Rescaling every feature within each patient fixed a patient that the model had been ranking backwards (chb01, AUC 0.24 to 0.94).
 
 ---
 
-## 2. Requirements
+## 2. How it works
 
-- MATLAB R2026b
-- Signal Processing Toolbox
-- Statistics and Machine Learning Toolbox
-- App Designer (included with base MATLAB)
-- Optional: Deep Learning Toolbox (CNN is cut unless we are ahead at day 9)
-
-Check your installation with `ver`. Both required toolboxes must appear.
+1. **Raw data:** CHB-MIT Scalp EEG recordings (EDF files, 18 channels, 256 Hz) plus a summary file giving each seizure's start and end.
+2. **Processed windows:** band-pass 0.5 to 40 Hz, cut into 5-second windows every 2.5 seconds, each labelled seizure (1) if at least half of it overlaps an annotated seizure, otherwise 0.
+3. **Features:** 126 numbers per window: for each of the 18 channels, relative band power in five bands (delta, theta, alpha, beta, gamma), log line length and spectral entropy. Each feature is then rescaled within the patient (median and spread of that patient's own windows, no labels needed).
+4. **Model:** a Random Forest (300 trees, minimum leaf size 20) gives a seizure risk score from 0 to 1 per window.
+5. **Alert rule:** an alert fires when the risk is at or above **0.4** for **3 windows in a row**. The best possible delay is about 10 s.
+6. **Evaluation:** sensitivity (seizures with an alert inside them), false alarms per hour (alerts outside any seizure), and latency (alert time minus onset). Always split by patient, never by window.
 
 ---
 
-## 3. Folder structure
+## 3. Try it on a new recording
+
+No annotations are needed. Give it a patient's whole session (about an hour or more), because the rescaling uses the recording as that patient's baseline.
+
+```matlab
+R = scoreRecording('C:\path\to\session.edf', 'Name', 'patient01', ...
+                   'OutDir', 'C:\reports', 'SaveForDashboard', true);
+```
+
+It prints the hours analysed, the alerts (time in seconds and hh:mm:ss, risk) and alerts per hour, saves `patient01_alerts.csv`, `patient01_windows.csv` and a risk plot, and with `SaveForDashboard` makes the recording available in the dashboard. Pass several EDF files of one patient as a cell array so they share one baseline.
+
+We checked this path by scoring `chb03_01.edf` as if it were new: it raised alerts at about 390 s (the annotated seizure is at 360 to 415 s) and about 815 s (a false alert), matching the annotated run.
+
+**Limits:** it needs the 18 standard bipolar channels (a file missing some stops with a message listing them); the 0.4 threshold was chosen on CHB-MIT, so another site's equipment may need a different value; it is a screening aid, not a diagnosis.
+
+**Dashboard:** `AtlasDashboard` replays a recording window by window with the risk curve, threshold, ALERT status, alert log and patient results. Use chb03 or chb18 for a full replay (training patients keep only some windows).
+
+---
+
+## 4. Setup
+
+**Requirements:** MATLAB R2026b with the Signal Processing Toolbox and the Statistics and Machine Learning Toolbox. Check with `ver`.
+
+**Two folders:** the repo holds code; the data lives outside Git (shared through Google Drive). Point MATLAB at the data folder, ideally in your personal `startup.m` (`edit(fullfile(userpath,'startup.m'))`):
+
+```matlab
+setenv('ATLAS_DATA', 'C:\Users\YOU\Documents\ATLAS_DATA');
+addpath(genpath('C:\Users\YOU\Documents\AI-Powered-Seizure-Early-Warning-System'));
+```
+
+The data folder holds `raw/` (EDF files and summaries), `processed/`, `features/` and `models/` (the final model, `rf_final.mat`).
 
 ```
 /
-├── config.m          All project settings (only the Lead edits this)
-├── Dashboard/        App Designer app and its helper functions
-├── Data/             Raw and processed data (NOT pushed to Git)
-│   ├── raw/          Downloaded EDF files and summary files
-│   └── processed/    One .mat file per patient (see section 4)
-├── Docs/             Methods notes, figures, slides
-├── Evaluation/       Metrics, patient-wise splits, robustness tests
-├── Features/         Feature extraction functions
-├── Models/           Training scripts and saved models
-├── Preprocessing/    Downloading, loading, labelling, filtering, windowing
-└── README.md
+├── config.m          All settings (one source of truth)
+├── Dashboard/        AtlasDashboard.m
+├── Data/             Raw, processed, features, models (NOT in Git)
+├── Docs/             Figures and notes
+├── Evaluation/       evaluateEvents, threshold tuning, robustness tests
+├── Features/         extractFeatures, buildFeatureTable
+├── Inference/        scoreRecording, readEdfWindows (new, unlabelled recordings)
+├── Models/           trainModel, predictRisk, model comparison and tuning
+└── Preprocessing/    downloadData, buildPatientData, checks
 ```
-
-`Data/` is listed in `.gitignore`. The data is stored in our shared Google Drive folder instead (see section 5).
 
 ---
 
-## 4. Locked decisions and data standard
+## 5. Reproducing the results
 
-These decisions were approved by the team. Do not change one without telling the Lead. All numeric settings live in `config.m`, and every script reads them from there. Nobody types these values into their own code.
+Functions are run from the Command Window. Patients: train chb05, chb14, chb01, chb15; test chb03, chb18; never use chb21 (same subject as chb01).
 
-### 4.1 Core decisions
+1. `downloadData()` then `checkChannels()` for the raw files.
+2. `buildPatientData(id)` then `buildFeatureTable(id)` for each of the six patients; `checkPatient(id)` to inspect.
+3. Model work on training patients only: `compareModels()`, `tuneRandomForest()`, `featureAblation()`, `testNormalization()`.
+4. Threshold: rebuild two training patients with every window kept (`buildPatientData('chb05', config(), true)`, `buildFeatureTable('chb05_full')`, same for chb01), score them with models trained on the other patients, and choose the threshold from detection against false alarms per hour (0.4).
+5. Lock the settings in `config.m` (`alertThreshold = 0.4`, `normalizeFeatures = true`), train the final model on all four training patients (`trainModel`) and save it to `Data/models/rf_final.mat`.
+6. Final test, once: `predictRisk` with the final model on chb03 and chb18 and `evaluateEvents`; then `runRobustness(config().trainPatients, 'chb03', true)` and the same for chb18. `runRobustness` and `looPatientScores` refuse the test patients until you pass `true`.
 
-| # | Decision |
-|---|---|
-| 1 | We claim seizure detection as an early-warning and screening aid, not prediction |
-| 2 | CHB-MIT is the only dataset for results. Bonn is only a quick check that code runs |
-| 3 | Train on chb05, chb14, chb01 and chb15. Test on chb03 and chb18, never used in training |
-| 4 | 256 Hz and 18 standard bipolar channels shared by all six patients |
-| 5 | Band-pass filter 0.5 to 40 Hz |
-| 6 | 5-second windows with 50% overlap |
-| 7 | A window is labelled seizure if at least 50% of it overlaps an annotated seizure |
-| 8 | Features per channel: five band powers, line length, spectral entropy. Models: Random Forest (main) and SVM (baseline). CNN cut unless ahead at day 9 |
-| 9 | An alert fires when the risk score is above the threshold for 3 windows in a row |
-| 10 | The threshold is tuned on training patients only, then locked on day 11 before touching test patients |
-| 11 | Headline metrics: sensitivity, false alarms per hour, detection latency |
-| 12 | Robustness test: re-run test patients with fewer channels and added noise |
-| 13 | All settings live in `config.m`, and only the Lead changes it |
-| 14 | The dashboard replays recorded EEG from the test patients and shows the risk score, alert and top features |
+---
 
-### 4.2 Settings
+## 6. Data standard and function contracts
 
 | Item | Standard |
 |---|---|
-| Datasets | CHB-MIT Scalp EEG (main), Bonn (prototyping only) |
-| Training patients | chb05, chb14, chb01, chb15 |
-| Test patients | chb03, chb18 (never trained on) |
-| Never use | chb21 (same subject as chb01) |
-| Sampling rate | 256 Hz |
-| Channels | 18 bipolar: FP1-F7, F7-T7, T7-P7, P7-O1, FP1-F3, F3-C3, C3-P3, P3-O1, FP2-F4, F4-C4, C4-P4, P4-O2, FP2-F8, F8-T8, T8-P8, P8-O2, FZ-CZ, CZ-PZ. Drop dummy "-" channels and extras |
-| Filtering | Band-pass 0.5 to 40 Hz |
+| Sampling rate / channels | 256 Hz; 18 bipolar: FP1-F7, F7-T7, T7-P7, P7-O1, FP1-F3, F3-C3, C3-P3, P3-O1, FP2-F4, F4-C4, C4-P4, P4-O2, FP2-F8, F8-T8, T8-P8, P8-O2, FZ-CZ, CZ-PZ |
+| Filter | Band-pass 0.5 to 40 Hz |
 | Window | 5 s (1280 samples), 50% overlap (2.5 s step) |
-| Label | 1 if at least 50% of the window overlaps an annotated seizure, otherwise 0 |
+| Label | 1 if at least 50% of the window overlaps an annotated seizure |
+| Training data | All seizure windows plus about 10 seizure-free windows per seizure window |
+| Test data | Every window kept, so false alarms per hour is meaningful |
 | Random seed | `rng(42)` at the top of every script |
 
-> **Data role, first task:** run `edfinfo` on one file from each of the six patients and confirm all 18 channel names exist (some recordings may label a duplicated channel with a suffix). If a patient is missing channels, tell the Lead so the list in `config.m` can be trimmed to the shared set.
+**Processed file** `Data/processed/<id>.mat` (saved `-v7.3`): `windows` (windows x 18 x 1280, single), `labels`, `windowStartSec`, `fileName`, `patientID`, `fs`, `channelNames`, `skippedFiles`.
 
-### 4.3 Processed file: `Data/processed/<patientID>.mat`
-
-| Variable | Description |
-|---|---|
-| `windows` | windows x channels x samples, single precision |
-| `labels` | column vector of 0/1, one per window |
-| `windowStartSec` | start time of each window in seconds |
-| `fileName` | source EDF file for each window |
-| `patientID` | for example `'chb05'` |
-| `fs` | 256 |
-| `channelNames` | cell array, in the order above |
-
-Save with `save(..., '-v7.3')` because the files are large.
-
-### 4.4 Feature table
-
-One row per window. Columns: `patientID`, `fileName`, `windowStartSec`, `label`, then the features. Feature columns are named `<feature>_<channel>`, for example `lineLength_FP1F7`. Features per channel: band power in delta (0.5-4 Hz), theta (4-8), alpha (8-13), beta (13-30) and gamma (30-40), plus line length and spectral entropy.
-
-### 4.5 Function contracts
+**Feature table** `Data/features/<id>.mat`, variable `T`: columns `patientID`, `fileName`, `windowStartSec`, `label`, then 126 features named `<feature>_<channel>` (for example `delta_FP1F7`, `lineLength_CZPZ`).
 
 | Function | Input | Output |
 |---|---|---|
-| `buildPatientData` | `patientID, cfg` | saves the processed `.mat` file |
-| `extractFeatures` | `windows, fs` | feature table |
-| `trainModel` | training feature table | trained model |
-| `predictRisk` | model, feature table | risk score from 0 to 1 per window |
-| `evaluateEvents` | `scores, labels, windowStartSec, fileName, opts` | a struct with sensitivity, false alarms per hour, median latency, and tables of each seizure and alert |
+| `buildPatientData` | `patientID, cfg, keepAll` | saves the processed file |
+| `extractFeatures` | `windows, fs, channelNames` | feature table |
+| `trainModel` | `Ttrain, method, normalize` | model struct (rescaling follows `cfg.normalizeFeatures`) |
+| `predictRisk` | `model, T` | risk 0 to 1 per window (pass a patient's whole table) |
+| `evaluateEvents` | `scores, labels, windowStartSec, fileName, opts` | struct: sensitivity, false alarms per hour, median latency, seizure and alert tables |
+| `scoreRecording` | `edfFiles, options` | alerts and window scores for new, unlabelled recordings |
 
-### 4.6 Alert and evaluation rules
-
-- **Alert:** the risk score stays at or above the threshold for 3 consecutive windows.
-- **Detected seizure:** an alert starts inside the annotated seizure interval.
-- **Sensitivity:** detected seizures divided by total seizures.
-- **False alarms per hour:** alerts outside any seizure, divided by hours of seizure-free recording.
-- **Latency:** alert time minus seizure onset time. With the 3-window rule, the best possible latency is about 10 seconds.
-
-### 4.7 Splitting and class imbalance
-
-- Split by patient, never by window. Neighbouring windows share half their signal.
-- Training: keep every seizure window and subsample seizure-free windows (about 10 per seizure window), or use class weights.
-- Testing: use the full, untouched recordings with no subsampling, so false alarms per hour is meaningful.
+**Alert and evaluation rules:** an alert fires when the score is at or above the threshold for 3 consecutive windows (time = end of the completing window). A seizure is detected if an alert falls inside it; latency is the first such alert minus onset (accurate to about one window); a false alarm is an alert outside every seizure. False alarms per hour is only valid on full, unsubsampled recordings.
 
 ---
 
-## 5. Getting the data
+## 7. Limitations
 
-The data is too large for Git, so we share it through a Google Drive folder.
-
-**Data role (once):**
-1. Install Google Drive for desktop and create a folder, for example `TeamAtlas-Data`. Share it with the team.
-2. In MATLAB, point the project at that folder, then download:
-   ```matlab
-   setenv('ATLAS_DATA', 'G:\My Drive\TeamAtlas-Data')   % use your own Drive path
-   downloadData()
-   ```
-3. `downloadData` is safe to re-run. Existing files are skipped, so after a dropped connection just run it again.
-
-**Everyone else:** in Google Drive for desktop, right-click the shared folder and choose to make it available offline (or copy it to `Data/` inside your repo), then run `setenv('ATLAS_DATA', ...)` with your local path. Reading directly from a streamed Drive folder can be slow.
-
-`downloadData` fetches, for each patient: the `chbNN-summary.txt` file, every file containing a seizure, and evenly spaced seizure-free files (6 per training patient, 10 per test patient). Expect roughly 4 GB in total.
+- Only four training patients and two test patients (13 test seizures), so results describe these patients, not epilepsy in general.
+- Detectability varies strongly between patients (chb05 against chb14), and false alarm rates differed between the test patients (2.2 and 5.0 per hour).
+- The threshold came from full recordings of two training patients (12 seizures), so the test false alarm rate (3.5 per hour) is above our target of about one per hour.
+- Rescaling uses the patient's whole recording as the baseline, so a live system would need a short baseline period or a running estimate. Per-recording rescaling may also flatter the noise results.
+- The 8-channel and 4-channel sets are examples, not clinical montages. A model for fewer channels would need retraining.
+- Detection only. Not a diagnosis, and not validated for clinical use.
 
 ---
 
-## 6. How to run
+## 8. Team
 
-Fill in exact script names as they are written.
-
-1. **Get data:** `downloadData()` (see section 5).
-2. **Prepare data:** run `Preprocessing/buildPatientData` for each patient to load, label, filter and window into `Data/processed/`.
-3. **Extract features:** run `Features/extractFeatures` to build the feature table.
-4. **Train models:** run `Models/[script]` to train Random Forest and SVM.
-5. **Evaluate:** run `Evaluation/[script]` for sensitivity, false alarms per hour and latency.
-6. **Robustness tests:** run `Evaluation/[script]` with fewer channels and added noise.
-7. **Dashboard:** open `Dashboard/[app].mlapp` in App Designer and click Run.
-
----
-
-## 7. Team workflow
-
-- **Daily check-in:** 15 minutes at [time]: what's done, what's next, what's blocked.
-- **Push at least once a day.** Pull before you start work each day.
-- **One function, one purpose.** Give every function a comment block describing inputs and outputs.
-- **Naming:** `lowerCamelCase` for variables and functions, descriptive file names.
-- **Branches:** work on a branch named after your role and merge to `main` only when your part runs.
-- **Never commit data files.**
-
----
-
-## 8. Timeline (14 days)
-
-| Days | Goal |
+| Role | Name |
 |---|---|
-| 1-2 | Setup, data download, channel check |
-| 3-6 | Pipeline v1: one patient end to end, baseline model, dashboard playback |
-| 7-9 | Full run on all patients, tuning, connect model to dashboard |
-| 10-11 | Robustness tests and explainability, then freeze the model and lock the threshold |
-| 12-13 | Packaging, documentation, slides, demo rehearsal, backup video |
-| 14 | Buffer: fixes only, submit early |
+| Project lead, data, features and model, evaluation, dashboard | [Name] |
+| [Role] | [Name] |
+| [Role] | [Name] |
 
-**Checkpoints:** end of day 4, one patient's data flows from loading to a model output. End of day 9, the full pipeline works.
+Fill in the names and roles before submission.
 
 ---
 
-## 9. Deliverables
-
-- [ ] Clean dataset and preprocessing code
-- [ ] Trained model with metrics
-- [ ] Robustness results (performance against channel count and noise level)
-- [ ] Explainability figures (feature importance and Shapley plots)
-- [ ] Working dashboard
-- [ ] Documentation (this README and a short methods write-up)
-- [ ] Pitch deck, live demo and backup demo video
-
----
-
-## 10. Data sources and citations
+## 9. Data sources and citations
 
 - Guttag, J. (2010). CHB-MIT Scalp EEG Database (version 1.0.0). PhysioNet. https://doi.org/10.13026/C2K01R
 - Shoeb, A. (2009). Application of Machine Learning to Epileptic Seizure Onset Detection and Treatment. PhD Thesis, MIT.
-- Andrzejak RG, Lehnertz K, Rieke C, Mormann F, David P, Elger CE (2001). Indications of nonlinear deterministic and finite dimensional structures in time series of brain electrical activity. Phys. Rev. E, 64, 061907 (Bonn dataset).
+- Andrzejak RG, Lehnertz K, Rieke C, Mormann F, David P, Elger CE (2001). Phys. Rev. E, 64, 061907 (Bonn dataset, used only for early code checks).
