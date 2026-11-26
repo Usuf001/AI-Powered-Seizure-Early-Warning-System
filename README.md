@@ -8,11 +8,22 @@ A MATLAB pipeline that detects seizures in scalp EEG recordings of children and 
 
 ---
 
+## Data links
+
+| Link | What it is | When to use it |
+|---|---|---|
+| [CHB-MIT Scalp EEG Database (PhysioNet)](https://physionet.org/content/chbmit/1.0.0/) | The public raw recordings (EDF files and seizure annotations) | To rebuild everything from scratch (section 5) |
+| [Prepared data (Google Drive)](https://drive.google.com/drive/folders/1GF3liaYtPGg6lC7ivwm5U_zkH-Qm6f4-?usp=sharing) | Our processed windows, feature tables and the final model (`rf_final.mat`), derived from CHB-MIT | To run the dashboard and scoring right away (section 4) |
+
+The data are not stored in this repository because of their size.
+
+---
+
 ## For reviewers: start here
 
 - **See the results without running anything:** open `Docs/AtlasSubmission.pdf` (or `Docs/AtlasSubmission.mlx` in MATLAB). Every table and figure is saved inside.
-- **Data:** not stored in this repository because of their size. The raw recordings are the public CHB-MIT database (see section 8), and section 5 lists the steps that rebuild everything from them.
-- **Run it yourself:** set up as in section 4, then open the live script or run `AtlasDashboard`.
+- **Run it yourself, fast:** download the [prepared data from Google Drive](https://drive.google.com/drive/folders/1GF3liaYtPGg6lC7ivwm5U_zkH-Qm6f4-?usp=sharing), set up as in section 4, then run `AtlasDashboard`.
+- **Rebuild from the raw recordings:** download them from [PhysioNet](https://physionet.org/content/chbmit/1.0.0/) (or run `downloadData()`) and follow section 5.
 
 ---
 
@@ -76,14 +87,53 @@ We checked this path by scoring `chb03_01.edf` as if it were new: it raised aler
 
 **Requirements:** MATLAB R2026b with the Signal Processing Toolbox and the Statistics and Machine Learning Toolbox. Check with `ver`.
 
-**Two folders:** the repo holds code; the data lives outside Git, in a folder on your own computer. Point MATLAB at the data folder, ideally in your personal `startup.m` (`edit(fullfile(userpath,'startup.m'))`):
+**Two folders:** the repo holds code; the data lives outside Git, in a folder on your own computer.
 
-```matlab
-setenv('ATLAS_DATA', 'C:\Users\YOU\Documents\ATLAS_DATA');
-addpath(genpath('C:\Users\YOU\Documents\AI-Powered-Seizure-Early-Warning-System'));
-```
+### Getting the data
 
-The data folder holds `raw/` (EDF files and summaries), `processed/`, `features/` and `models/` (the final model, `rf_final.mat`).
+**Option A: download the prepared files (fast, recommended)**
+
+1. Download the folder from [Google Drive](https://drive.google.com/drive/folders/1GF3liaYtPGg6lC7ivwm5U_zkH-Qm6f4-?usp=sharing).
+2. Place it on your computer so it has this layout:
+
+   ```
+   ATLAS_DATA/
+   ├── models/       rf_final.mat
+   ├── processed/    chb01.mat, chb03.mat, ...
+   └── features/     chb01.mat, chb03.mat, ...
+   ```
+
+3. Point MATLAB at it, ideally in your personal `startup.m` (`edit(fullfile(userpath,'startup.m'))`):
+
+   ```matlab
+   setenv('ATLAS_DATA', 'C:\Users\YOU\Documents\ATLAS_DATA');
+   addpath(genpath('C:\Users\YOU\Documents\AI-Powered-Seizure-Early-Warning-System'));
+   ```
+
+4. Check that everything is found:
+
+   ```matlab
+   clear functions
+   cfg = config();
+   cfg.dataRoot
+   isfile(fullfile(cfg.dataRoot,'models','rf_final.mat'))   % 1
+   isfile(fullfile(cfg.dataRoot,'processed','chb03.mat'))   % 1
+   isfile(fullfile(cfg.dataRoot,'features','chb03.mat'))    % 1
+   ```
+
+5. Launch the dashboard:
+
+   ```matlab
+   AtlasDashboard
+   ```
+
+If `ATLAS_DATA` is not set, `config.m` looks for a `Data` folder inside the repository, so you can also put the files there.
+
+**Option B: rebuild from the raw recordings (slow)**
+
+Download the recordings from the [CHB-MIT database on PhysioNet](https://physionet.org/content/chbmit/1.0.0/), or run `downloadData()`, then follow section 5. The data folder then holds `raw/` (EDF files and summaries), `processed/`, `features/` and `models/`.
+
+### Repository layout
 
 ```
 /
@@ -149,9 +199,8 @@ Functions are run from the Command Window. Patients: train chb05, chb14, chb01, 
 - The threshold came from full recordings of two training patients (12 seizures), so the test false alarm rate (3.5 per hour) is above our target of about one per hour.
 - Rescaling uses the patient's whole recording as the baseline, so a live system would need a short baseline period or a running estimate. Per-recording rescaling may also flatter the noise results.
 - The 8-channel and 4-channel sets are examples, not clinical montages. A model for fewer channels would need retraining.
+- The dashboard's feature panel shows model-wide importance, not an explanation of each alert.
 - Detection only. Not a diagnosis, and not validated for clinical use.
-
----
 
 ---
 
@@ -159,4 +208,6 @@ Functions are run from the Command Window. Patients: train chb05, chb14, chb01, 
 
 - Guttag, J. (2010). CHB-MIT Scalp EEG Database (version 1.0.0). PhysioNet. https://doi.org/10.13026/C2K01R
 - Shoeb, A. (2009). Application of Machine Learning to Epileptic Seizure Onset Detection and Treatment. PhD Thesis, MIT.
+- Goldberger, A. et al. (2000). PhysioBank, PhysioToolkit, and PhysioNet. Circulation 101(23), e215-e220.
 - Andrzejak RG, Lehnertz K, Rieke C, Mormann F, David P, Elger CE (2001). Phys. Rev. E, 64, 061907 (Bonn dataset, used only for early code checks).
+- Prepared data derived from CHB-MIT (processed windows, features, final model): [Google Drive](https://drive.google.com/drive/folders/1GF3liaYtPGg6lC7ivwm5U_zkH-Qm6f4-?usp=sharing)
