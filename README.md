@@ -11,9 +11,8 @@ A MATLAB pipeline that detects seizures in scalp EEG recordings of children and 
 ## For reviewers: start here
 
 - **See the results without running anything:** open `Docs/AtlasSubmission.pdf` (or `Docs/AtlasSubmission.mlx` in MATLAB). Every table and figure is saved inside.
-- **Demo video:** [link to the video]
-- **Data and trained model:** [Google Drive link]. It holds the processed files, the feature tables and the final model (`rf_final.mat`). The raw recordings are the public CHB-MIT database (see section 8). Data are not stored in this repository because of their size.
-- **Run it yourself:** set up as in section 4 with the Drive folder as `ATLAS_DATA`, then open the live script or run `AtlasDashboard`.
+- **Data:** not stored in this repository because of their size. The raw recordings are the public CHB-MIT database (see section 8), and section 5 lists the steps that rebuild everything from them.
+- **Run it yourself:** set up as in section 4, then open the live script or run `AtlasDashboard`.
 
 ---
 
@@ -77,7 +76,7 @@ We checked this path by scoring `chb03_01.edf` as if it were new: it raised aler
 
 **Requirements:** MATLAB R2026b with the Signal Processing Toolbox and the Statistics and Machine Learning Toolbox. Check with `ver`.
 
-**Two folders:** the repo holds code; the data lives outside Git (shared through Google Drive). Point MATLAB at the data folder, ideally in your personal `startup.m` (`edit(fullfile(userpath,'startup.m'))`):
+**Two folders:** the repo holds code; the data lives outside Git, in a folder on your own computer. Point MATLAB at the data folder, ideally in your personal `startup.m` (`edit(fullfile(userpath,'startup.m'))`):
 
 ```matlab
 setenv('ATLAS_DATA', 'C:\Users\YOU\Documents\ATLAS_DATA');
