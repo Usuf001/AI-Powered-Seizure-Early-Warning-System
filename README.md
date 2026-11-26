@@ -8,6 +8,15 @@ A MATLAB pipeline that detects seizures in scalp EEG recordings of children and 
 
 ---
 
+## For reviewers: start here
+
+- **See the results without running anything:** open `Docs/AtlasSubmission.pdf` (or `Docs/AtlasSubmission.mlx` in MATLAB). Every table and figure is saved inside.
+- **Demo video:** [link to the video]
+- **Data and trained model:** [Google Drive link]. It holds the processed files, the feature tables and the final model (`rf_final.mat`). The raw recordings are the public CHB-MIT database (see section 8). Data are not stored in this repository because of their size.
+- **Run it yourself:** set up as in section 4 with the Drive folder as `ATLAS_DATA`, then open the live script or run `AtlasDashboard`.
+
+---
+
 ## 1. Results
 
 Final test on two patients the model never saw (chb03, chb18), run once with the model and the alert threshold (0.4) locked beforehand.
@@ -145,19 +154,9 @@ Functions are run from the Command Window. Patients: train chb05, chb14, chb01, 
 
 ---
 
-## 8. Team
-
-| Role | Name |
-|---|---|
-| Project lead, data, features and model, evaluation, dashboard | [Name] |
-| [Role] | [Name] |
-| [Role] | [Name] |
-
-Fill in the names and roles before submission.
-
 ---
 
-## 9. Data sources and citations
+## 8. Data sources and citations
 
 - Guttag, J. (2010). CHB-MIT Scalp EEG Database (version 1.0.0). PhysioNet. https://doi.org/10.13026/C2K01R
 - Shoeb, A. (2009). Application of Machine Learning to Epileptic Seizure Onset Detection and Treatment. PhD Thesis, MIT.
